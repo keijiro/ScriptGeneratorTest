@@ -1,46 +1,57 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace AICommand {
-
-[FilePath("UserSettings/AICommandSettings.asset",
-          FilePathAttribute.Location.ProjectFolder)]
-public sealed class AICommandSettings : ScriptableSingleton<AICommandSettings>
+namespace AICommand
 {
-    public string apiKey = null;
-    public int timeout = 0;
-    public void Save() => Save(true);
-    void OnDisable() => Save();
-}
-
-sealed class AICommandSettingsProvider : SettingsProvider
-{
-    public AICommandSettingsProvider()
-      : base("Project/AI Command", SettingsScope.Project) {}
-
-    public override void OnGUI(string search)
+    [FilePath("UserSettings/AICommandSettings.asset", FilePathAttribute.Location.ProjectFolder)]
+    public sealed class AICommandSettings : ScriptableSingleton<AICommandSettings>
     {
-        var settings = AICommandSettings.instance;
+        [Header("OpenAI Settings")]
+        [Tooltip("The API key for accessing the OpenAI API.")]
+        public string apiKey = null;
 
-        var key = settings.apiKey;
-        var timeout = settings.timeout;
+        [Tooltip("The timeout value (in seconds) for API requests.")]
+        public int timeout = 10;
 
-        EditorGUI.BeginChangeCheck();
+        /// <summary>
+        /// Saves the settings to disk.
+        /// </summary>
+        public void Save() => Save(true);
 
-        key = EditorGUILayout.TextField("API Key", key);
-        timeout = EditorGUILayout.IntField("Timeout", timeout);
-
-        if (EditorGUI.EndChangeCheck())
-        {
-            settings.apiKey = key;
-            settings.timeout = timeout;
-            settings.Save();
-        }
+        private void OnDisable() => Save();
     }
 
-    [SettingsProvider]
-    public static SettingsProvider CreateCustomSettingsProvider()
-      => new AICommandSettingsProvider();
-}
+    sealed class AICommandSettingsProvider : SettingsProvider
+    {
+        public AICommandSettingsProvider()
+            : base("Project/AI Command", SettingsScope.Project) { }
 
-} // namespace AICommand
+        public override void OnGUI(string search)
+        {
+            var settings = AICommandSettings.instance;
+
+            EditorGUI.BeginChangeCheck();
+
+            EditorGUILayout.LabelField("AI Command Settings", EditorStyles.boldLabel);
+            settings.apiKey = EditorGUILayout.TextField(new GUIContent("API Key", "Your OpenAI API key."), settings.apiKey);
+
+            settings.timeout = EditorGUILayout.IntField(new GUIContent("Timeout", "Request timeout in seconds (default: 10)."), settings.timeout);
+
+            // Ensure timeout is a positive value
+            if (settings.timeout < 1)
+            {
+                EditorGUILayout.HelpBox("Timeout must be greater than 0.", MessageType.Warning);
+                settings.timeout = 10; // Default value
+            }
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                settings.Save();
+            }
+        }
+
+        [SettingsProvider]
+        public static SettingsProvider CreateCustomSettingsProvider()
+            => new AICommandSettingsProvider();
+    }
+}
